@@ -35,3 +35,19 @@ test("local server exposes health and serves the application with security heade
     await close(server);
   }
 });
+
+test("filter endpoint rejects missing filter parameters with an English client error", async () => {
+  const server = createServer();
+  const address = await listen(server);
+  const origin = `http://127.0.0.1:${address.port}`;
+
+  try {
+    const response = await fetch(`${origin}/api/filter`);
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "Invalid request."
+    });
+  } finally {
+    await close(server);
+  }
+});

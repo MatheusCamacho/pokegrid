@@ -308,14 +308,20 @@ export async function listGeneration(id, { limit = 32, offset = 0 } = {}) {
 }
 
 export async function filterPokemon({ type = "", generation = "", limit = 36, offset = 0 } = {}) {
-  const safeType = String(type).toLowerCase().trim();
-  const safeGeneration = String(generation).toLowerCase().trim();
-  const safeOffset = Math.max(Number(offset) || 0, 0);
-  const safeLimit = Math.min(Math.max(Number(limit) || 36, 1), 60);
+  const safeType = type ?String(type).toLowerCase().trim() : "";
+  const safeGeneration = generation ? String(generation).toLowerCase().trim() : "";
+  const safeOffset = offset ? Math.max(Number(offset) || 0, 0) : 0;
+  const safeLimit = limit ? Math.min(Math.max(Number(limit) || 36, 1), 60) : 36;
 
   let candidates = null;
 
-  if (safeType) {
+  if (safeType === "" && safeGeneration === "") {
+    const error = new Error("At least one filter must be provided: type or generation.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (safeType && safeType !== "") {
     const typeData = await fetchJson(`${API}/type/${encodeURIComponent(safeType)}`, { ttlMs: 12 * 60 * 60 * 1000 });
     candidates = (typeData.pokemon ?? []).map((entry) => ({
       name: entry.pokemon?.name,
@@ -323,7 +329,7 @@ export async function filterPokemon({ type = "", generation = "", limit = 36, of
     })).filter((entry) => entry.name);
   }
 
-  if (safeGeneration) {
+  if (safeGeneration && safeGeneration !== "") {
     const generationData = await fetchJson(`${API}/generation/${encodeURIComponent(safeGeneration)}`, { ttlMs: 24 * 60 * 60 * 1000 });
     const generationSpecies = new Map((generationData.pokemon_species ?? []).map((entry) => [entry.name, resourceId(entry.url)]));
 
